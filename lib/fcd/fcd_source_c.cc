@@ -172,12 +172,13 @@ std::vector< std::string > fcd_source_c::get_devices()
 
   for (device_t dev : _get_devices())
   {
-    std::string args = "fcd=" + boost::lexical_cast< std::string >( id++ );
+    std::string idStr = boost::lexical_cast< std::string >( id++ );
+    std::string args = "fcd=" + idStr;
 
     if ( dev.first == fcd_source_c::FUNCUBE_V1 )
       args += ",label='FUNcube Dongle V1.0'";
     else if ( dev.first == fcd_source_c::FUNCUBE_V2 )
-      args += ",label='FUNcube Dongle V2.0'";
+      args += ",label='FUNcube Dongle V2.0 " + idStr + "'";
 
     devices.push_back( args );
   }
