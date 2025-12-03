@@ -256,11 +256,17 @@ int bladerf_sink_c::work(int noutput_items,
 
   // convert floating point to fixed point and scale
   // input_items is gr_complex (2x float), so num_points is 2*noutput_items
-  volk_32f_s32f_convert_16i(_16icbuf, reinterpret_cast<float const *>(_32fcbuf),
-                            SCALING_FACTOR, 2*noutput_items);
+  if (_format == BLADERF_FORMAT_SC8_Q7 || _format == BLADERF_FORMAT_SC8_Q7_META) {
+    volk_32f_s32f_convert_8i((int8_t*)_16icbuf, reinterpret_cast<float const *>(_32fcbuf),
+                              SCALING_FACTOR_SC8_Q7, 2*noutput_items);
+  }
+  else {
+    volk_32f_s32f_convert_16i(_16icbuf, reinterpret_cast<float const *>(_32fcbuf),
+                              SCALING_FACTOR_SC16_Q11, 2*noutput_items);
+  }
 
   // transmit the samples from the temp buffer
-  if (BLADERF_FORMAT_SC16_Q11_META == _format) {
+  if (BLADERF_FORMAT_SC16_Q11_META == _format || BLADERF_FORMAT_SC8_Q7_META == _format) {
     status = transmit_with_tags(_16icbuf, noutput_items);
   } else {
     status = bladerf_sync_tx(_dev.get(), static_cast<void const *>(_16icbuf),
@@ -280,10 +286,10 @@ int bladerf_sink_c::work(int noutput_items,
     _failures = 0;
   }
 
-  return noutput_items;
+  return noutput_items/get_num_channels();
 }
 
-int bladerf_sink_c::transmit_with_tags(int16_t const *samples,
+int bladerf_sink_c::transmit_with_tags(void const *samples,
                                         int noutput_items)
 {
   int status;
@@ -362,9 +368,31 @@ int bladerf_sink_c::transmit_with_tags(int16_t const *samples,
 
       BLADERF_DEBUG("TXing @ EOB [" << start_idx << ":" << end_idx << "]");
 
-      status = bladerf_sync_tx(_dev.get(),
-                               static_cast<void const *>(&samples[2 * start_idx]),
-                               count, &meta, _stream_timeout);
+      switch (_format)
+      {
+      case BLADERF_FORMAT_SC16_Q11:
+      case BLADERF_FORMAT_SC16_Q11_META:
+        status = bladerf_sync_tx(_dev.get(),
+                                 static_cast<void const *>(&((int16_t *)samples)[2 * start_idx]),
+                                 count, &meta, _stream_timeout);
+        break;
+
+      case BLADERF_FORMAT_SC8_Q7:
+      case BLADERF_FORMAT_SC8_Q7_META:
+        status = bladerf_sync_tx(_dev.get(),
+                                 static_cast<void const *>(&((int8_t *)samples)[2 * start_idx]),
+                                 count, &meta, _stream_timeout);
+        break;
+
+      default:
+        ++_failures;
+        BLADERF_WARNING("Unrecognized bladeRF format. Defaulting to SC16_Q11/SC16_Q11_META packing scheme.");
+        status = bladerf_sync_tx(_dev.get(),
+                                 static_cast<void const *>(&((int16_t *)samples)[2 * start_idx]),
+                                 count, &meta, _stream_timeout);
+        break;
+      }
+
       if (status != 0) {
         return status;
       }
@@ -402,9 +430,15 @@ int bladerf_sink_c::transmit_with_tags(int16_t const *samples,
 
     BLADERF_DEBUG("TXing SOB [" << start_idx << ":" << end_idx << "]");
 
-    status = bladerf_sync_tx(_dev.get(),
-                             static_cast<void const *>(&samples[2 * start_idx]),
-                             count, &meta, _stream_timeout);
+    if (_format == BLADERF_FORMAT_SC8_Q7 || _format == BLADERF_FORMAT_SC8_Q7_META) {
+      status = bladerf_sync_tx(_dev.get(),
+                              static_cast<void const *>(&((int8_t *)samples)[2 * start_idx]),
+                              count, &meta, _stream_timeout);
+    } else {
+      status = bladerf_sync_tx(_dev.get(),
+                              static_cast<void const *>(&((int16_t *)samples)[2 * start_idx]),
+                              count, &meta, _stream_timeout);
+    }
   }
 
   return status;

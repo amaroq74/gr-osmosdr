@@ -313,8 +313,63 @@ void bladerf_common::init(dict_t const &dict, bladerf_direction direction)
     _stream_timeout = boost::lexical_cast<unsigned int>(_get(dict, "stream_timeout_ms"));
   }
 
+  /* Set feature */
+  if (dict.count("feature")) {
+    if (_get(dict, "feature") == "oversample") {
+        _feature = BLADERF_FEATURE_OVERSAMPLE;
+    } else if (_get(dict, "feature") == "default") {
+        _feature = BLADERF_FEATURE_DEFAULT;
+    } else {
+        BLADERF_THROW("Specified feature invalid. Valid formats: [default|oversample]");
+    }
+  } else {
+    _feature = BLADERF_FEATURE_DEFAULT;
+  }
+
+  status = bladerf_enable_feature(_dev.get(), _feature, true);
+  if (status != 0) {
+    BLADERF_THROW_STATUS(status, "Unable to set feature");
+  } else {
+    std::string feature_text = (_feature == BLADERF_FEATURE_OVERSAMPLE) ? "OVERSAMPLE" : "DEFAULT";
+    BLADERF_INFO(feature_text + " feature enabled");
+  }
+
+  /* Explicately set sample_format */
+  if (dict.count("sample_format")) {
+    if (_get(dict, "sample_format") == "16" || _get(dict, "sample_format") == "16bit") {
+        _format = BLADERF_FORMAT_SC16_Q11;
+        BLADERF_INFO("Sample format set to 16bit");
+    } else if (_get(dict, "sample_format") == "16packed" || _get(dict, "sample_format") == "16bit_packed") {
+        _format = BLADERF_FORMAT_SC16_Q11_PACKED;
+        BLADERF_INFO("Sample format set to 16bit packed");
+    } else if (_get(dict, "sample_format") == "8" || _get(dict, "sample_format") == "8bit") {
+        _format = BLADERF_FORMAT_SC8_Q7;
+        BLADERF_INFO("Sample format set to 8bit");
+    } else {
+        BLADERF_THROW("Specified sample format invalid. Valid formats: [16bit|16bit_packed|8bit]");
+    }
+  } else {
+    _format = BLADERF_FORMAT_SC16_Q11;
+    BLADERF_DEBUG( "Sample format not provided. SC16 Q11 set by default.");
+  }
+
   if (dict.count("enable_metadata") > 0) {
-    _format = BLADERF_FORMAT_SC16_Q11_META;
+    switch (_format) {
+      case BLADERF_FORMAT_SC16_Q11:
+        _format = BLADERF_FORMAT_SC16_Q11_META;
+        BLADERF_INFO("Meta mode enabled for SC16_Q11");
+        break;
+      case BLADERF_FORMAT_SC8_Q7:
+        _format = BLADERF_FORMAT_SC8_Q7_META;
+        BLADERF_INFO("Meta mode enabled for SC8_Q7");
+        break;
+      case BLADERF_FORMAT_SC16_Q11_PACKED:
+        BLADERF_THROW("Metadata mode is not supported with packed format (SC16_Q11_PACKED)");
+        break;
+      default:
+        BLADERF_THROW("Meta enable requested for unknown sample format");
+        break;
+    }
   }
 
   /* Require value to be >= 2 so we can ensure we have twice as many

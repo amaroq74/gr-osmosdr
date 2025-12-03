@@ -149,6 +149,10 @@ protected:
    *  verbosity       verbose, debug, info, warning, error, critical, silent
    *                    (default: info)
    *                    ** Note: applies only to libbladeRF logging
+   *  feature         oversample, default (default: default)
+   *                    ** Note: controls bladeRF hardware features
+   *  sample_format   16bit, 16bit_packed, 8bit (default: 16bit)
+   *                    ** Note: specifies the sample format to use
    */
   void init(dict_t const &dict, bladerf_direction direction);
 
@@ -252,6 +256,7 @@ protected:
   size_t _num_transfers;        /**< number of active backend transfers */
   unsigned int _stream_timeout; /**< timeout for backend transfers */
 
+  bladerf_feature _feature;     /**< feature assigned to board */
   bladerf_format _format;       /**< sample format to use */
 
   bladerf_channel_map _chanmap; /**< map of antennas to channels */

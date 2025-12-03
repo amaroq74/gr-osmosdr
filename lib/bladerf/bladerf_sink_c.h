@@ -120,7 +120,7 @@ public:
   void set_biastee_mode(const std::string &mode);
 
 private:
-  int transmit_with_tags(int16_t const *samples, int noutput_items);
+  int transmit_with_tags(void const *samples, int noutput_items);
 
   // Sample-handling buffers
   int16_t *_16icbuf;              /**< raw samples to bladeRF */
@@ -133,7 +133,8 @@ private:
   gr::thread::mutex d_mutex;      /**< mutex to protect set/work access */
 
   /* Scaling factor used when converting from float to int16_t */
-  const float SCALING_FACTOR = 2048.0f;
+  const float SCALING_FACTOR_SC16_Q11 = 2048.0f;
+  const float SCALING_FACTOR_SC8_Q7 = 127.0f;
 };
 
 #endif // INCLUDED_BLADERF_SINK_C_H
