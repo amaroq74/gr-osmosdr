@@ -340,7 +340,8 @@ void bladerf_common::init(dict_t const &dict, bladerf_direction direction)
         _format = BLADERF_FORMAT_SC16_Q11;
         BLADERF_INFO("Sample format set to 16bit");
     } else if (_get(dict, "sample_format") == "16packed" || _get(dict, "sample_format") == "16bit_packed") {
-        _format = BLADERF_FORMAT_SC16_Q11_PACKED;
+        #_format = BLADERF_FORMAT_SC16_Q11_PACKED;
+        _format = BLADERF_FORMAT_SC16_Q11_META;
         BLADERF_INFO("Sample format set to 16bit packed");
     } else if (_get(dict, "sample_format") == "8" || _get(dict, "sample_format") == "8bit") {
         _format = BLADERF_FORMAT_SC8_Q7;
@@ -363,7 +364,8 @@ void bladerf_common::init(dict_t const &dict, bladerf_direction direction)
         _format = BLADERF_FORMAT_SC8_Q7_META;
         BLADERF_INFO("Meta mode enabled for SC8_Q7");
         break;
-      case BLADERF_FORMAT_SC16_Q11_PACKED:
+      #case BLADERF_FORMAT_SC16_Q11_PACKED:
+      case BLADERF_FORMAT_SC16_Q11_META:
         BLADERF_THROW("Metadata mode is not supported with packed format (SC16_Q11_PACKED)");
         break;
       default:
